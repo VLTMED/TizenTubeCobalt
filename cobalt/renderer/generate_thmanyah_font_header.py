@@ -74,7 +74,7 @@ def build_css(font_root: Path) -> str:
     css.append(
         '.ytp-caption-segment, .ytp-caption-window-container,'
         '.ytp-caption-window-container *, .caption-window, .captions-text,'
-        'ytlr-caption, [class*="caption-segment"], [class*="subtitle"],'
+        'ytlr-caption, [class*="caption"], [class*="subtitle"],'
         '[class*="Caption"], [class*="Subtitle"] {'
         'font-family: "Thmanyah Sans", Arial, sans-serif !important;'
         "font-weight: 500 !important;"
