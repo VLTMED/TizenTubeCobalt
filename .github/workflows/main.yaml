@@ -566,6 +566,44 @@ jobs:
         with:
           use_gcloud: ${{ !inputs.use_github_hosted }}
 
+      - name: Prepare temporary Android debug keystore
+        if: ${{ inputs.use_github_hosted }}
+        shell: bash
+        working-directory: cobalt/src
+        run: |
+          set -euo pipefail
+          mkdir -p .android
+          if [[ -f .android/debug.keystore ]]; then
+            exit 0
+          fi
+
+          keytool=""
+          for candidate in "${JAVA_HOME:-}/bin/keytool" third_party/jdk/current/bin/keytool; do
+            if [[ -x "${candidate}" ]]; then
+              keytool="${candidate}"
+              break
+            fi
+          done
+          if [[ -z "${keytool}" ]]; then
+            keytool="$(command -v keytool || true)"
+          fi
+          if [[ -z "${keytool}" || ! -x "${keytool}" ]]; then
+            echo "::error::keytool is not available after depot_tools setup."
+            exit 1
+          fi
+
+          "${keytool}" -genkeypair -v \
+            -keystore .android/debug.keystore \
+            -storetype JKS \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -noprompt
+
       - name: Build Cobalt
         id: build
         uses: ./.github/actions/build
