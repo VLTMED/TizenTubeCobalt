@@ -91,6 +91,31 @@ def build_css(font_root: Path) -> str:
     return "\n".join(css)
 
 
+def build_header(css: str) -> str:
+    delimiter = "THMANYAH_CSS"
+    if f"){delimiter}\"" in css:
+        raise ValueError("Unexpected raw-string delimiter collision.")
+
+    # Keep each physical C++ source line well below compiler translation
+    # limits while adjacent raw string literals preserve the CSS byte-for-byte.
+    literals = "\n".join(
+        f'R"{delimiter}({css[offset:offset + 4096]}){delimiter}"'
+        for offset in range(0, len(css), 4096)
+    )
+    return (
+        "// Generated file. Do not check in or redistribute.\n"
+        "#ifndef COBALT_RENDERER_THMANYAH_FONT_DATA_H_\n"
+        "#define COBALT_RENDERER_THMANYAH_FONT_DATA_H_\n\n"
+        "namespace cobalt {\n"
+        "namespace thmanyah_font {\n"
+        "inline constexpr char kCss[] =\n"
+        f"{literals};\n"
+        "}  // namespace thmanyah_font\n"
+        "}  // namespace cobalt\n\n"
+        "#endif  // COBALT_RENDERER_THMANYAH_FONT_DATA_H_\n"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--font-root", required=True, type=Path)
@@ -98,26 +123,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         css = build_css(args.font_root)
+        header = build_header(css)
     except ValueError as error:
         print(error, file=sys.stderr)
         return 2
 
-    delimiter = "THMANYAH_CSS"
-    if f"){delimiter}\"" in css:
-        print("Unexpected raw-string delimiter collision.", file=sys.stderr)
-        return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    header = (
-        "// Generated file. Do not check in or redistribute.\n"
-        "#ifndef COBALT_RENDERER_THMANYAH_FONT_DATA_H_\n"
-        "#define COBALT_RENDERER_THMANYAH_FONT_DATA_H_\n\n"
-        "namespace cobalt {\n"
-        "namespace thmanyah_font {\n"
-        f'inline constexpr char kCss[] = R"{delimiter}({css}){delimiter}";\n'
-        "}  // namespace thmanyah_font\n"
-        "}  // namespace cobalt\n\n"
-        "#endif  // COBALT_RENDERER_THMANYAH_FONT_DATA_H_\n"
-    )
     args.output.write_text(header, encoding="utf-8", newline="\n")
     print(f"Generated local font header: {args.output} ({len(header)} bytes)")
     return 0

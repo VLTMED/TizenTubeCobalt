@@ -28,6 +28,12 @@ class FontGeneratorTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 GENERATOR.build_css(root)
 
+    def test_generated_header_splits_long_literals(self):
+        css = "x" * 10000
+        header = GENERATOR.build_header(css)
+        self.assertLess(max(len(line) for line in header.splitlines()), 5000)
+        self.assertEqual(header.count('R"THMANYAH_CSS('), (len(css) + 4095) // 4096)
+
     def test_css_maps_caption_and_open_type_features(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
