@@ -90,7 +90,7 @@ source_set("renderer") {
   if (enable_thmanyah_fonts) {
     deps += [ ":generate_thmanyah_font_data" ]
     include_dirs = [ "$target_gen_dir" ]
-    defines += [ "ENABLE_THMANYAH_FONTS" ]
+    defines = [ "ENABLE_THMANYAH_FONTS" ]
   }
 }
 

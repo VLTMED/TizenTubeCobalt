@@ -14,15 +14,14 @@
 
 #include "cobalt/renderer/cobalt_render_frame_observer.h"
 
-#if defined(ENABLE_THMANYAH_FONTS)
 #include <string>
 
+#include "base/command_line.h"
 #include "base/json/string_escape.h"
 #include "base/strings/utf_string_conversions.h"
+#if defined(ENABLE_THMANYAH_FONTS)
 #include "thmanyah_font_data.h"
 #endif  // defined(ENABLE_THMANYAH_FONTS)
-
-#include "base/command_line.h"
 #include "cobalt/browser/switches.h"
 #include "content/public/renderer/render_frame.h"
 #include "net/base/ip_address.h"
