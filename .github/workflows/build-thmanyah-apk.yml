@@ -12,6 +12,7 @@ on:
       - .github/workflows/main.yaml
       - cobalt/renderer/**
       - cobalt/build/configs/android-arm64/**
+      - cobalt/docker/**
       - third_party/thmanyah-fonts/**
   pull_request:
     branches:
@@ -24,6 +25,7 @@ on:
       - .github/workflows/main.yaml
       - cobalt/renderer/**
       - cobalt/build/configs/android-arm64/**
+      - cobalt/docker/**
       - third_party/thmanyah-fonts/**
   workflow_dispatch:
 
