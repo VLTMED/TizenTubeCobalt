@@ -14,6 +14,14 @@
 
 #include "cobalt/renderer/cobalt_render_frame_observer.h"
 
+#if defined(ENABLE_THMANYAH_FONTS)
+#include <string>
+
+#include "base/json/string_escape.h"
+#include "base/strings/utf_string_conversions.h"
+#include "thmanyah_font_data.h"
+#endif  // defined(ENABLE_THMANYAH_FONTS)
+
 #include "base/command_line.h"
 #include "cobalt/browser/switches.h"
 #include "content/public/renderer/render_frame.h"
@@ -36,6 +44,38 @@ CobaltRenderFrameObserver::CobaltRenderFrameObserver(
 }
 
 CobaltRenderFrameObserver::~CobaltRenderFrameObserver() = default;
+
+void CobaltRenderFrameObserver::DidFinishLoad() {
+#if defined(ENABLE_THMANYAH_FONTS)
+  if (!render_frame() || !render_frame()->IsMainFrame()) {
+    return;
+  }
+
+  // Limit the override to YouTube pages. Keep caption size, position, contrast,
+  // and bidi direction under the page/player's control.
+  std::string script = R"JS(
+    (() => {
+      const host = window.location.hostname.toLowerCase();
+      if (host !== "youtube.com" && !host.endsWith(".youtube.com") &&
+          host !== "youtube-nocookie.com" &&
+          !host.endsWith(".youtube-nocookie.com")) {
+        return;
+      }
+      if (document.getElementById("cobalt-thmanyah-arabic-fonts")) {
+        return;
+      }
+      const style = document.createElement("style");
+      style.id = "cobalt-thmanyah-arabic-fonts";
+      style.textContent = )JS";
+  script += base::GetQuotedJSONString(thmanyah_font::kCss);
+  script += R"JS(;
+      (document.head || document.documentElement).appendChild(style);
+    })();
+  )JS";
+
+  render_frame()->ExecuteJavaScript(base::UTF8ToUTF16(script));
+#endif  // defined(ENABLE_THMANYAH_FONTS)
+}
 
 void CobaltRenderFrameObserver::OnDestruct() {
   delete this;

@@ -36,6 +36,8 @@ class CobaltRenderFrameObserver : public content::RenderFrameObserver,
   void DidMeaningfulLayout(
       blink::WebMeaningfulLayout meaningful_layout) override;
 
+  void DidFinishLoad() override;
+
   // blink::WebContentSettingsClient implementation.
   bool AllowRunningInsecureContent(bool enabled_per_settings,
                                    const blink::WebURL& url) override;
