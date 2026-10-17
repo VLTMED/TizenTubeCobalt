@@ -13,6 +13,9 @@ inputs:
   enable_sccache:
     description: Use sccache for build acceleration.
     default: 'false'
+  no_rbe:
+    description: Disable remote build execution when no RBE credentials are available.
+    default: 'false'
   sccache_gcs_key:
     description: GCS SA key to read/write to bucket
 runs:
@@ -30,13 +33,14 @@ runs:
       - name: GN gen
         env:
           ENABLE_SCCACHE: ${{ inputs.enable_sccache }}
+          DISABLE_RBE: ${{ inputs.no_rbe }}
           PLATFORM: ${{ matrix.platform }}
           CONFIG: ${{ matrix.config }}
         working-directory: cobalt/src
         run: |
           gn_flags=()
-          if [[ "${PLATFORM}" == *"tvos"* ]]; then
-            # TvOS does not use RBE unless it's sccache
+          if [[ "${DISABLE_RBE}" == "true" || "${PLATFORM}" == *"tvos"* ]]; then
+            # GitHub-hosted builds lack GCE credentials; tvOS also does not use RBE unless it's sccache.
             gn_flags+=(--no-rbe)
           fi
           if [[ "${ENABLE_SCCACHE}" == "true" ]]; then

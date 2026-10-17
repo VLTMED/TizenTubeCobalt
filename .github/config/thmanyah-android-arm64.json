@@ -4,8 +4,7 @@
     "android-arm64"
   ],
   "build_runners": [
-    "self-hosted",
-    "chrobalt-linux-runner"
+    "ubuntu-latest"
   ],
   "build_configs": [
     "qa"

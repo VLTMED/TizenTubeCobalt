@@ -5,8 +5,11 @@ on:
     branches:
       - feature/thmanyah-arabic-tv-typography
     paths:
+      - .github/actions/build/**
+      - .github/actions/docker/**
       - .github/config/thmanyah-android-arm64.json
       - .github/workflows/build-thmanyah-apk.yml
+      - .github/workflows/main.yaml
       - cobalt/renderer/**
       - cobalt/build/configs/android-arm64/**
       - third_party/thmanyah-fonts/**
@@ -14,8 +17,11 @@ on:
     branches:
       - main
     paths:
+      - .github/actions/build/**
+      - .github/actions/docker/**
       - .github/config/thmanyah-android-arm64.json
       - .github/workflows/build-thmanyah-apk.yml
+      - .github/workflows/main.yaml
       - cobalt/renderer/**
       - cobalt/build/configs/android-arm64/**
       - third_party/thmanyah-fonts/**
@@ -37,7 +43,7 @@ jobs:
 
   android-arm64-apk:
     name: Build Android arm64 QA APK
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name != 'pull_request'
     needs: font-generator-tests
     uses: ./.github/workflows/main.yaml
     permissions:
@@ -47,6 +53,7 @@ jobs:
     with:
       platform: thmanyah-android-arm64
       nightly: 'false'
+      use_github_hosted: true
     secrets:
       datadog_api_key: ${{ secrets.DD_API_KEY }}
 

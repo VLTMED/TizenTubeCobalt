@@ -13,6 +13,9 @@ inputs:
   github_token:
     description: "The github token."
     required: true
+  use_gce_auth:
+    description: "Whether to authenticate to Google registries through GCE metadata."
+    default: 'true'
 outputs:
   docker_tag:
     description: "The full docker image tag."
@@ -48,6 +51,7 @@ runs:
       shell: bash
 
     - name: Login to GAR
+      if: inputs.use_gce_auth == 'true'
       env:
         IS_PR: ${{ inputs.is_pr }}
       run: |
@@ -82,7 +86,8 @@ runs:
       run: |
         # Pull Existing Docker Image
         set -x
-        DOCKER_COMPOSE_IMAGE="${GITHUB_DOCKER_REGISTRY_URL}/${GITHUB_REPOSITORY}/${DOCKER_SERVICE}"
+        GITHUB_REPOSITORY_LOWER=$(printf '%s' "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+        DOCKER_COMPOSE_IMAGE="${GITHUB_DOCKER_REGISTRY_URL}/${GITHUB_REPOSITORY_LOWER}/${DOCKER_SERVICE}"
 
         if [[ "${IS_PR}" == "true" ]]; then
           if docker manifest inspect "${DOCKER_COMPOSE_IMAGE}:${DOCKER_CONTENT_SHA}"; then
