@@ -38,14 +38,15 @@ runs:
         run: |
           set -euo pipefail
           source_root="$(pwd -P)"
+          workspace_root="${GITHUB_WORKSPACE:-$(realpath -m "${source_root}/../..")}"
+          workspace_root="$(realpath -m "${workspace_root}")"
+          expected_keystore="${workspace_root}/.android/debug.keystore"
           echo "Cobalt source root: ${source_root}"
+          echo "Workspace debug keystore: ${expected_keystore}"
 
-          if [[ -L .android && ! -e .android ]]; then
-            rm .android
-          fi
-          mkdir -p .android
+          mkdir -p "$(dirname "${expected_keystore}")"
 
-          if [[ ! -f .android/debug.keystore ]]; then
+          if [[ ! -f "${expected_keystore}" ]]; then
             keytool=""
             for candidate in "${JAVA_HOME:-}/bin/keytool" third_party/jdk/current/bin/keytool; do
               if [[ -x "${candidate}" ]]; then
@@ -62,7 +63,7 @@ runs:
             fi
 
             "${keytool}" -genkeypair -v \
-              -keystore .android/debug.keystore \
+              -keystore "${expected_keystore}" \
               -storetype JKS \
               -storepass android \
               -alias androiddebugkey \
@@ -74,15 +75,15 @@ runs:
               -noprompt
           fi
 
-          actual_keystore="$(realpath -e .android/debug.keystore)"
-          ninja_keystore="$(realpath -m "out/${PLATFORM}_${CONFIG}/../../.android/debug.keystore")"
+          actual_keystore="$(realpath -e "${expected_keystore}")"
+          ninja_keystore="$(realpath -m "${source_root}/../../.android/debug.keystore")"
           if [[ ! -s "${actual_keystore}" || "${actual_keystore}" != "${ninja_keystore}" ]]; then
-            echo "::error::Debug keystore does not match the expected Ninja input path."
+            echo "::error::Debug keystore does not match the Ninja/Siso workspace-root input path."
             echo "Actual: ${actual_keystore}"
-            echo "Expected: ${ninja_keystore}"
+            echo "Expected by Ninja/Siso: ${ninja_keystore}"
             exit 1
           fi
-          echo "Verified debug keystore for GN/Ninja: ${actual_keystore}"
+          echo "Verified Ninja/Siso workspace-root keystore: ${actual_keystore}"
 
       - name: Install sccache
         if: inputs.enable_sccache == 'true'
