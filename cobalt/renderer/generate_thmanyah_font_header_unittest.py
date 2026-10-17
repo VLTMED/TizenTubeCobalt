@@ -42,12 +42,24 @@ class FontGeneratorTest(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(b"OTTOtest-font-data")
             css = GENERATOR.build_css(root)
+
             self.assertIn('"Thmanyah Sans"', css)
             self.assertIn('"Thmanyah Serif Text"', css)
             self.assertIn('"Thmanyah Serif Display"', css)
             self.assertIn('"liga" 1, "ss03" 1', css)
             self.assertIn('data-thmanyah-alternates="true"', css)
             self.assertEqual(css.count("@font-face"), len(GENERATOR.FONT_FACES))
+
+            # YouTube TV variants must still receive the caption font.
+            self.assertIn('[class*="caption"]', css)
+            self.assertIn('[class*="subtitle"]', css)
+            self.assertIn('font-weight: 500 !important;', css)
+
+            # Typography must not override player sizing or bidi/layout policy.
+            self.assertNotIn("font-size:", css)
+            self.assertNotIn("line-height:", css)
+            self.assertNotIn("direction:", css)
+            self.assertNotIn("unicode-bidi:", css)
 
 
 if __name__ == "__main__":
