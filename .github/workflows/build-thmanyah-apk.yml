@@ -11,6 +11,7 @@ on:
       - .github/workflows/build-thmanyah-apk.yml
       - .github/workflows/main.yaml
       - cobalt/renderer/**
+      - cobalt/shell/android/**
       - cobalt/build/configs/android-arm64/**
       - cobalt/docker/**
       - third_party/thmanyah-fonts/**
@@ -24,6 +25,7 @@ on:
       - .github/workflows/build-thmanyah-apk.yml
       - .github/workflows/main.yaml
       - cobalt/renderer/**
+      - cobalt/shell/android/**
       - cobalt/build/configs/android-arm64/**
       - cobalt/docker/**
       - third_party/thmanyah-fonts/**
