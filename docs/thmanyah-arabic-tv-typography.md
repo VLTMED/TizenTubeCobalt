@@ -1,68 +1,39 @@
-# Arabic TV typography: optional Thmanyah font integration
+# دمج الخطوط العربية لتجربة التلفاز
 
-This change adds an **opt-in local build path** for testing the original Thmanyah
-OTF family in TizenTube Cobalt. It does not add font binaries, converted WOFF2
-files, or generated font data to this public repository. The feature is off by
-default, so existing builds and UI behavior are unchanged unless explicitly enabled.
+## توزيع الخطوط داخل الواجهة
 
-## Intended typography on a television
+يستخدم هذا الدمج خمسة ملفات OTF أصلية فقط لتقليل الحجم وتجنّب أوزان لا تحتاجها واجهة التلفاز:
 
-- **Thmanyah Sans** is the default for menus, buttons, navigation, metadata, and
-  other interface text. Its low contrast and simple forms are the most suitable
-  starting point for a TV viewed from a distance.
-- **Thmanyah Serif Display** is reserved for primary headings and recognizable
-  video-title treatments; it is not applied to every menu label.
-- **Thmanyah Serif Text** is used for longer video descriptions, where its text
-  design is more appropriate than the display face.
-- **Embedded captions/subtitles** use Sans Medium (weight 500). The integration
-  deliberately leaves player-managed font size, position, outline, background,
-  line spacing, and shadow untouched. This preserves existing TV caption
-  controls and contrast rather than hard-coding a one-size-fits-all subtitle.
+- **Thmanyah Sans Regular (400):** القوائم والأزرار والبيانات الوصفية والنصوص العامة.
+- **Thmanyah Sans Medium (500):** الترجمة والتعليقات النصية على الفيديو.
+- **Thmanyah Sans Bold (700):** إبراز عناصر الواجهة التي تطلب وزنًا غامقًا.
+- **Thmanyah Serif Display Bold (700):** العناوين الرئيسية وعناوين الفيديو.
+- **Thmanyah Serif Text Regular (400):** الأوصاف الطويلة ونصوص القراءة.
 
-The global typography rule excludes common icon-font classes and SVG content.
-Arabic direction and bidi behavior are not forced, because the page/player is
-responsible for mixed Arabic, Latin, and numeric runs.
+الاختيار مقصود للشاشة الكبيرة: Sans واضح للنص المتكرر، وSerif Display محصور في العناوين، وSerif Text للنص الأطول. تُستثنى SVG وخطوط الأيقونات ومكوّناتها من قاعدة الخط العامة. لا يفرض الدمج `direction` أو `unicode-bidi` أو حجم الخط أو تباعد الأسطر أو موضع الترجمة أو ظلّها؛ تظل هذه مسؤولية الصفحة ومشغّل الفيديو، بما يحافظ على RTL والنصوص المختلطة العربية واللاتينية والأرقام وإعدادات المشاهد.
 
-## OpenType choices
+## ميزات OpenType وقواعد دليل الخط
 
-- **liga** is enabled for captions to retain the family's standard ligature
-  behavior, which includes the documented slanted-kashida treatment where the
-  font's shaping rules call for it. Do not insert tatweel characters (ـ)
-  into arbitrary words to imitate the feature.
-- The supplied Sans OTF's GSUB metadata labels **ss03** as **fatha-ar 01**. The
-  integration enables that stylistic set for captions only so vowel marks can
-  use the corresponding drawing where present. It does not assume that subtitles
-  contain full Arabic diacritics.
-- **salt** (Stylistic Alternates / alternate letterforms) is **not enabled
-  globally**. It is opt-in on elements marked **data-thmanyah-alternates="true"**,
-  so it can be reserved for a small number of suitable headings instead of
-  decorating every adjacent word.
-- The font files are read as supplied OTF data. This generator does not convert,
-  rename, or rewrite them. The supplied WOFF2 copies are intentionally ignored.
+- يعرّف جدول GSUB في Sans الميزة `ss03` باسم `fatha-ar 01`؛ لذلك تُفعّل هذه الميزة في نص الترجمة فقط لتحسين رسم الفتحة عند وجودها.
+- لا يُفرض `liga` في نص الترجمة أو الوصف والعنوان الديناميكي. يشرح دليل الخط أن الكشيدة المائلة معالجة تحريرية محدودة: لا تُكثر منها في الجملة، ولا تستخدمها في النصوص الطويلة، ويُختار شكلها بحسب الكلمة. لذلك لا يُدرج التطبيق محرف التطويل `ـ` ولا يختار كاشيدة آليًا لعناوين أو ترجمة فيديو متغيرة.
+- ميزة `salt` تحتوي بدائل عربية فعلية، لكنها اختيارية عبر `data-thmanyah-alternates="true"` فقط. لا يضيف التطبيق هذا الوسم تلقائيًا؛ استخدمه فقط في عنوان قصير ومراجع، وتجنب تتابع الكلمات المزخرفة كما يوصي الدليل.
+- لا تُحوّل ملفات OTF ولا تُعاد تسميتها. ملفات WOFF2 غير مستخدمة.
 
-## Local setup
+## الأصول والحقوق
 
-1. Obtain the font package from the official source and review its current
-   license. Keep the original directory structure and file names.
-2. Copy the original **thmanyah typeface** directory to
-   **third_party/thmanyah-local-fonts/thmanyah typeface/**. This path is ignored
-   by Git so the font files are not committed accidentally.
-3. Before enabling embedding or distributing an APK, confirm that the current
-   license permits embedding the fonts into this Android/TV app and distributing
-   the resulting application. The official FAQ currently says the font is
-   intended for Windows/macOS and does not support Android, and the license
-   prohibits redistributing or hosting the font files. Do not upload the font,
-   a generated header, or an APK containing it to public CI artifacts unless
-   the rights holder has explicitly confirmed that this use is permitted.
-4. Configure GN with **enable_thmanyah_fonts=true** only for an authorized local
-   build. The GN action generates **thmanyah_font_data.h** under the build output
-   directory from the local OTF files; it is not tracked in the source tree.
+تضمّن المستودع خمسة ملفات OTF أصلية من الحزمة التي قدمها مالك المشروع. أكد مالك المشروع امتلاكه الحقوق أو تفويضًا صريحًا يسمح بضمّن هذه الملفات وتوزيعها داخل APK Android/TV ومخرجات GitHub Actions الخاصة بهذا المستودع. ملفات الخطوط أصول منفصلة ولا يشملها ترخيص Apache-2.0 الخاص بكود Cobalt؛ راجع [إشعار الأصول](../third_party/thmanyah-fonts/NOTICE.md). لم تتضمن الحزمة المرفقة ملف ترخيص منفصلًا، لذا فهذا الإشعار يسجل الإذن الخاص بهذا المشروع ولا يمنح ترخيصًا عامًا لاستخدام الخطوط خارجه.
 
-For reference, the rights holder's current terms and font-design guidance are
-published at:
+يولّد GN ترويسة C++ داخل مجلد build من الأصول المتتبعة. لا تُرفع الترويسة المولّدة إلى المصدر.
 
-- https://ask.thmanyah.com/en/thmanyah-line-for-everyone
-- https://font.thmanyah.com/
+## البناء واختبارات CI
 
-The default value for **enable_thmanyah_fonts** is **false**. The feature is
-deliberately opt-in rather than downloading or bundling font files automatically.
+يُفعّل `enable_thmanyah_fonts=true` في إعداد `android-arm64` على هذا الفرع. يشغّل workflow **Thmanyah Arabic TV APK** اختبارات مولّد الخطوط على GitHub-hosted runner، ثم يستدعي `.github/workflows/main.yaml` لبناء إعداد QA الافتراضي `android-arm64` عبر الهدف `cobalt:gn_all`، كما في إعداد المشروع الحالي. بعد البناء، يعيد job منفصل محاذاة ملفات APK وتوقيعها بمفتاح الاختبار الثابت ثم يرفع artifact **android-arm64 APKs - stable test signature**؛ استخدم هذا الـartifact للتثبيت والتحديث بين التشغيلات، لا artifact البناء الخام **android-arm64 APKs**.
+
+يعتمد جزء بناء Cobalt على runner ذاتي الاستضافة بالوسمين `self-hosted` و`chrobalt-linux-runner`، وعلى صورة Docker `linux`. أظهر الفحص الحالي عدم وجود runners مسجّلة لهذا المستودع؛ لذلك سيبقى بناء APK في حالة انتظار حتى يُسجّل runner بهذه الوسوم. تستخدم خطوة التوقيع السرّين `TIZENTUBE_CI_TEST_KEYSTORE_B64` و`TIZENTUBE_CI_TEST_KEYSTORE_PASSWORD` من GitHub Actions. هذا مفتاح اختبار جديد؛ قد يلزم حذف نسخة مثبتة موقّعة بشهادة مختلفة مرة واحدة، وبعدها يمكن تثبيت تشغيلات هذا workflow فوق النسخة السابقة. اختبارات الأجهزة وE2E/YTS معطّلة لأنها تحتاج بنية خاصة، ونجاح البناء لا يغني عن مراجعة بصرية على تلفاز فعلي.
+
+## قائمة تحقق قبل الدمج
+
+- راجع عنوانًا عربيًا طويلًا، وعنوانًا يمزج العربية والإنجليزية والأرقام، مع التحقق من عدم قصّ النص أو كسر ترتيب الأرقام.
+- جرّب الترجمة بأحجام المشغّل المختلفة، مع الحركات وبدونها، وتحقق من بقاء الحجم والموضع والتباين تحت تحكم مشغل الفيديو.
+- تحقق من أن الرموز والأيقونات لم تستبدل بالخط العربي، وأن التركيز والتنقل بالريموت لم يتغيرا.
+- أجرِ مراجعة بصرية على جهاز Android TV فعلي قبل اعتماد إصدار إنتاجي أو توقيعه.

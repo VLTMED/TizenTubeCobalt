@@ -14,7 +14,8 @@
 import("//starboard/build/buildflags.gni")
 import("//testing/test.gni")
 
-# The font binaries are licensed separately and are never checked into this repo.
+# The font assets are separately licensed; see
+# //third_party/thmanyah-fonts/NOTICE.md.
 declare_args() {
   enable_thmanyah_fonts = false
 }
@@ -22,24 +23,14 @@ declare_args() {
 if (enable_thmanyah_fonts) {
   action("generate_thmanyah_font_data") {
     script = "generate_thmanyah_font_header.py"
-    _font_root = "//third_party/thmanyah-local-fonts/thmanyah typeface"
+    _font_root = "//third_party/thmanyah-fonts/thmanyah typeface"
     inputs = [
       script,
-      "$_font_root/thmanyahsans/otf/thmanyahsans-Light.otf",
       "$_font_root/thmanyahsans/otf/thmanyahsans-Regular.otf",
       "$_font_root/thmanyahsans/otf/thmanyahsans-Medium.otf",
       "$_font_root/thmanyahsans/otf/thmanyahsans-Bold.otf",
-      "$_font_root/thmanyahsans/otf/thmanyahsans-Black.otf",
-      "$_font_root/thmanyahseriftext/otf/thmanyahseriftext-Light.otf",
       "$_font_root/thmanyahseriftext/otf/thmanyahseriftext-Regular.otf",
-      "$_font_root/thmanyahseriftext/otf/thmanyahseriftext-Medium.otf",
-      "$_font_root/thmanyahseriftext/otf/thmanyahseriftext-Bold.otf",
-      "$_font_root/thmanyahseriftext/otf/thmanyahseriftext-Black.otf",
-      "$_font_root/thmanyahserifdisplay/otf/thmanyahserifdisplay-Light.otf",
-      "$_font_root/thmanyahserifdisplay/otf/thmanyahserifdisplay-Regular.otf",
-      "$_font_root/thmanyahserifdisplay/otf/thmanyahserifdisplay-Medium.otf",
       "$_font_root/thmanyahserifdisplay/otf/thmanyahserifdisplay-Bold.otf",
-      "$_font_root/thmanyahserifdisplay/otf/thmanyahserifdisplay-Black.otf",
     ]
     outputs = [ "$target_gen_dir/thmanyah_font_data.h" ]
     args = [

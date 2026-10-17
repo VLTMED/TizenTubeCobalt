@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small regression tests for the local Thmanyah font-header generator."""
+"""Regression tests for the embedded Thmanyah font-header generator."""
 
 import importlib.util
 from pathlib import Path
@@ -10,6 +10,9 @@ SCRIPT = Path(__file__).with_name("generate_thmanyah_font_header.py")
 SPEC = importlib.util.spec_from_file_location("thmanyah_generator", SCRIPT)
 GENERATOR = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(GENERATOR)
+PROJECT_FONT_ROOT = (
+    SCRIPT.parents[2] / "third_party" / "thmanyah-fonts" / "thmanyah typeface"
+)
 
 
 class FontGeneratorTest(unittest.TestCase):
@@ -34,7 +37,7 @@ class FontGeneratorTest(unittest.TestCase):
         self.assertLess(max(len(line) for line in header.splitlines()), 5000)
         self.assertEqual(header.count('R"THMANYAH_CSS('), (len(css) + 4095) // 4096)
 
-    def test_css_maps_caption_and_open_type_features(self):
+    def test_css_maps_tv_roles_and_open_type_features(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             for relative_path, _, _ in GENERATOR.FONT_FACES:
@@ -43,23 +46,30 @@ class FontGeneratorTest(unittest.TestCase):
                 path.write_bytes(b"OTTOtest-font-data")
             css = GENERATOR.build_css(root)
 
-            self.assertIn('"Thmanyah Sans"', css)
-            self.assertIn('"Thmanyah Serif Text"', css)
-            self.assertIn('"Thmanyah Serif Display"', css)
-            self.assertIn('"liga" 1, "ss03" 1', css)
-            self.assertIn('data-thmanyah-alternates="true"', css)
-            self.assertEqual(css.count("@font-face"), len(GENERATOR.FONT_FACES))
+        self.assertIn('"Thmanyah Sans"', css)
+        self.assertIn('"Thmanyah Serif Text"', css)
+        self.assertIn('"Thmanyah Serif Display"', css)
+        self.assertEqual(css.count("@font-face"), 5)
+        self.assertIn('font-feature-settings: "liga" 0, "ss03" 1 !important;', css)
+        self.assertIn('[data-thmanyah-alternates="true"]', css)
+        self.assertIn('"salt" 1', css)
+        self.assertIn(".ytp-caption-segment", css)
+        self.assertIn(".caption-window", css)
+        self.assertNotIn('[class*="caption"]', css)
+        self.assertNotIn('[class*="subtitle"]', css)
+        self.assertNotIn("ـ", css)
 
-            # YouTube TV variants must still receive the caption font.
-            self.assertIn('[class*="caption"]', css)
-            self.assertIn('[class*="subtitle"]', css)
-            self.assertIn('font-weight: 500 !important;', css)
+        # The player remains responsible for subtitle sizing and bidi/layout.
+        for property_name in ("font-size:", "line-height:", "direction:", "unicode-bidi:"):
+            self.assertNotIn(property_name, css)
 
-            # Typography must not override player sizing or bidi/layout policy.
-            self.assertNotIn("font-size:", css)
-            self.assertNotIn("line-height:", css)
-            self.assertNotIn("direction:", css)
-            self.assertNotIn("unicode-bidi:", css)
+    def test_real_project_assets_generate_embedded_css(self):
+        css = GENERATOR.build_css(PROJECT_FONT_ROOT)
+        self.assertEqual(len(GENERATOR.FONT_FACES), 5)
+        self.assertGreater(len(css), 1_500_000)
+        self.assertEqual(css.count("@font-face"), 5)
+        self.assertIn("data:font/otf;base64,", css)
+        self.assertNotIn(".woff2", css)
 
 
 if __name__ == "__main__":

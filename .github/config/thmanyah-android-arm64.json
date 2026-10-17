@@ -1,0 +1,36 @@
+{
+  "docker_service": "linux",
+  "platforms": [
+    "android-arm64"
+  ],
+  "build_runners": [
+    "self-hosted",
+    "chrobalt-linux-runner"
+  ],
+  "build_configs": [
+    "qa"
+  ],
+  "test_package": false,
+  "test_on_host": false,
+  "test_on_device": false,
+  "test_device_family": "android",
+  "test_e2e": false,
+  "test_yts": false,
+  "test_yts_playback": false,
+  "test_browser": false,
+  "test_yts_wpt": false,
+  "test_yts_finch": false,
+  "web_tests": false,
+  "test_root_target": "//cobalt/android:cobalt_apk",
+  "test_dimensions": {},
+  "enable_sccache": false,
+  "targets": [
+    "cobalt:gn_all"
+  ],
+  "includes": [
+    {
+      "name": "arm64",
+      "platform": "android-arm64"
+    }
+  ]
+}

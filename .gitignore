@@ -342,5 +342,5 @@ third_party/rust/target/
 # Extensions: Generated DNR e.g. /_metadata/generated_indexed_rulesets/_ruleset1
 **/_metadata/generated_indexed_rulesets/
 
-# Original Thmanyah OTF files are local-only; never commit font binaries.
+# Legacy local-only font directory; tracked, authorized assets live in /third_party/thmanyah-fonts/.
 /third_party/thmanyah-local-fonts/

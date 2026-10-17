@@ -1,33 +1,23 @@
 #!/usr/bin/env python3
-# Generates a local-only font data header from original Thmanyah OTF files.
-# Font files are deliberately not stored in this public repository.
+# Generates embedded font CSS from the original, tracked Thmanyah OTF assets.
 
 import argparse
 import base64
 from pathlib import Path
 import sys
 
+# Keep the TV bundle small and map only the weights used by the interface.
 FONT_FACES = (
-    ("thmanyahsans/otf/thmanyahsans-Light.otf", "Thmanyah Sans", 300),
     ("thmanyahsans/otf/thmanyahsans-Regular.otf", "Thmanyah Sans", 400),
     ("thmanyahsans/otf/thmanyahsans-Medium.otf", "Thmanyah Sans", 500),
     ("thmanyahsans/otf/thmanyahsans-Bold.otf", "Thmanyah Sans", 700),
-    ("thmanyahsans/otf/thmanyahsans-Black.otf", "Thmanyah Sans", 900),
-    ("thmanyahseriftext/otf/thmanyahseriftext-Light.otf", "Thmanyah Serif Text", 300),
     ("thmanyahseriftext/otf/thmanyahseriftext-Regular.otf", "Thmanyah Serif Text", 400),
-    ("thmanyahseriftext/otf/thmanyahseriftext-Medium.otf", "Thmanyah Serif Text", 500),
-    ("thmanyahseriftext/otf/thmanyahseriftext-Bold.otf", "Thmanyah Serif Text", 700),
-    ("thmanyahseriftext/otf/thmanyahseriftext-Black.otf", "Thmanyah Serif Text", 900),
-    ("thmanyahserifdisplay/otf/thmanyahserifdisplay-Light.otf", "Thmanyah Serif Display", 300),
-    ("thmanyahserifdisplay/otf/thmanyahserifdisplay-Regular.otf", "Thmanyah Serif Display", 400),
-    ("thmanyahserifdisplay/otf/thmanyahserifdisplay-Medium.otf", "Thmanyah Serif Display", 500),
     ("thmanyahserifdisplay/otf/thmanyahserifdisplay-Bold.otf", "Thmanyah Serif Display", 700),
-    ("thmanyahserifdisplay/otf/thmanyahserifdisplay-Black.otf", "Thmanyah Serif Display", 900),
 )
 
 
 def build_css(font_root: Path) -> str:
-    css = ["/* Original OTF bytes; generated locally and never checked in. */"]
+    css = ["/* Embedded original OTF assets; see third_party/thmanyah-fonts/NOTICE.md. */"]
     for relative_path, family, weight in FONT_FACES:
         path = font_root / relative_path
         try:
@@ -47,6 +37,7 @@ def build_css(font_root: Path) -> str:
             "}"
         )
 
+    # Preserve player controls and icon fonts; do not impose bidi, size, or layout.
     css.append(
         ':where(html, body, body *:not(svg):not(svg *):not(yt-icon)'
         ':not(yt-icon *):not(ytlr-icon):not(ytlr-icon *):not(.ytp-icon)'
@@ -55,7 +46,9 @@ def build_css(font_root: Path) -> str:
         ':not([class*="icon"]):not([class*="icon"] *)'
         ':not([class*="Icon"]):not([class*="Icon"] *)) {'
         'font-family: "Thmanyah Sans", Arial, sans-serif !important;'
+        'font-feature-settings: "liga" 0;'
         "font-kerning: normal;"
+        "font-synthesis: none;"
         "}"
     )
     css.append(
@@ -63,29 +56,32 @@ def build_css(font_root: Path) -> str:
         '[class*="video-title"], [class*="videoTitle"] {'
         'font-family: "Thmanyah Serif Display", "Thmanyah Sans", Arial, sans-serif !important;'
         "font-weight: 700 !important;"
+        'font-feature-settings: "liga" 0 !important;'
         "}"
     )
     css.append(
-        '[class*="description"], [class*="Description"], #description, .description {'
+        '#description, .description, ytlr-description, [class~="description"] {'
         'font-family: "Thmanyah Serif Text", "Thmanyah Sans", Arial, sans-serif !important;'
         "font-weight: 400 !important;"
+        'font-feature-settings: "liga" 0 !important;'
         "}"
     )
     css.append(
         '.ytp-caption-segment, .ytp-caption-window-container,'
         '.ytp-caption-window-container *, .caption-window, .captions-text,'
-        'ytlr-caption, [class*="caption"], [class*="subtitle"],'
-        '[class*="Caption"], [class*="Subtitle"] {'
+        'ytlr-caption, ytlr-caption *, video::cue {'
         'font-family: "Thmanyah Sans", Arial, sans-serif !important;'
         "font-weight: 500 !important;"
-        # The supplied Sans OTF names ss03 "fatha-ar 01".
-        # liga enables the family's supported slanted-kashida ligatures.
-        'font-feature-settings: "liga" 1, "ss03" 1 !important;'
+        # SS03 is named "fatha-ar 01" in the supplied Sans OTF metadata.
+        # The guide reserves slanted-kashida styling for carefully edited text;
+        # dynamic captions therefore keep that ligature feature off.
+        'font-feature-settings: "liga" 0, "ss03" 1 !important;'
         "}"
     )
     css.append(
+        # Arabic stylistic alternates remain opt-in; never decorate every word.
         '[data-thmanyah-alternates="true"] {'
-        'font-feature-settings: "salt" 1 !important;'
+        'font-feature-settings: "liga" 0, "salt" 1 !important;'
         "}"
     )
     return "\n".join(css)
@@ -103,7 +99,7 @@ def build_header(css: str) -> str:
         for offset in range(0, len(css), 4096)
     )
     return (
-        "// Generated file. Do not check in or redistribute.\n"
+        "// Generated file. Do not check in; font asset notice is in third_party/thmanyah-fonts/NOTICE.md.\n"
         "#ifndef COBALT_RENDERER_THMANYAH_FONT_DATA_H_\n"
         "#define COBALT_RENDERER_THMANYAH_FONT_DATA_H_\n\n"
         "namespace cobalt {\n"
@@ -130,7 +126,7 @@ def main() -> int:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(header, encoding="utf-8", newline="\n")
-    print(f"Generated local font header: {args.output} ({len(header)} bytes)")
+    print(f"Generated embedded font header: {args.output} ({len(header)} bytes)")
     return 0
 
 
