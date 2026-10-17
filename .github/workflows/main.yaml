@@ -18,6 +18,11 @@ on:
         required: false
         type: boolean
         default: false
+      use_github_hosted:
+        description: 'Run this build on GitHub-hosted runners without GCE-only setup.'
+        required: false
+        type: boolean
+        default: false
     secrets:
       datadog_api_key:
         required: false
@@ -409,7 +414,7 @@ jobs:
   # Builds, tags, and pushes Cobalt docker build images to ghr.
   docker-build-image:
     needs: [initialize]
-    runs-on: [self-hosted, chrobalt-linux-runner]
+    runs-on: ${{ fromJSON(needs.initialize.outputs.build_runners) }}
     steps:
       - name: Restore CI Essentials
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -426,6 +431,7 @@ jobs:
           is_pr: ${{ (github.event_name == 'pull_request') }}
           docker_content_sha: ${{ needs.initialize.outputs.docker_content_sha }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_gce_auth: ${{ !inputs.use_github_hosted }}
     outputs:
       docker_tag: ${{ steps.build-docker-image.outputs.docker_tag }}
 
@@ -477,7 +483,9 @@ jobs:
 
   build:
     needs: [initialize, docker-build-image]
-    permissions: {}
+    permissions:
+      contents: read
+      packages: read
     runs-on: ${{ fromJSON(needs.initialize.outputs.build_runners) }}
     name: ${{ matrix.name }}_${{ matrix.config }}
     strategy:
@@ -488,7 +496,10 @@ jobs:
         config: ${{ fromJson(needs.initialize.outputs.build_configs) }}
     container:
       image: ${{ needs.docker-build-image.outputs.docker_tag }}
-      options: --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor=unconfined
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: ${{ inputs.use_github_hosted && '' || '--device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor=unconfined' }}
       volumes:
         - /runner-cache:/runner-cache
     env:
@@ -523,18 +534,18 @@ jobs:
       # Before that, keep a weak coupling for easier revert.
       - name: Prepare OverlayFS Workspace
         id: overlay_workspace
-        if: ${{ !contains(matrix.platform, 'tvos') }}
+        if: ${{ !inputs.use_github_hosted && !contains(matrix.platform, 'tvos') }}
         uses: ./.github/actions/overlay_workspace
         with:
           path: cobalt
           use_gcloud: true
 
       - name: Runner Cache Hot
-        if: ${{ !contains(matrix.platform, 'tvos') && steps.overlay_workspace.outputs.cache_hit == 'true' }}
+        if: ${{ !inputs.use_github_hosted && !contains(matrix.platform, 'tvos') && steps.overlay_workspace.outputs.cache_hit == 'true' }}
         shell: bash
         run: echo "Golden workspace found on SSD."
       - name: Runner Cache Cold
-        if: ${{ !contains(matrix.platform, 'tvos') && steps.overlay_workspace.outputs.cache_hit != 'true' }}
+        if: ${{ !inputs.use_github_hosted && !contains(matrix.platform, 'tvos') && steps.overlay_workspace.outputs.cache_hit != 'true' }}
         shell: bash
         run: echo "Golden workspace missing or corrupted. Triggered full initialization sync."
 
@@ -553,7 +564,7 @@ jobs:
         id: setup-depot-tools
         uses: ./.github/actions/depot_tools
         with:
-          use_gcloud: true
+          use_gcloud: ${{ !inputs.use_github_hosted }}
 
       - name: Build Cobalt
         id: build
@@ -565,6 +576,8 @@ jobs:
           test_root_target: ${{ needs.initialize.outputs.test_root_target }}
           test_targets_json_file: out/${{ matrix.platform }}_${{ matrix.config }}/test_targets.json
           enable_sccache: ${{ needs.initialize.outputs.enable_sccache == 'true' }}
+          no_rbe: ${{ inputs.use_github_hosted }}
+          prepare_android_debug_keystore: ${{ inputs.use_github_hosted }}
           sccache_gcs_key: ${{ secrets.sccache_gcs_key }}
 
       - name: Release Package

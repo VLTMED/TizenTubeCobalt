@@ -1,6 +1,6 @@
-ARG BASE_IMAGE_SHA=sha256:be15f84c44c4ee68b4f187128f0278df1b0f424c04fb5f08b098967d5b896388
-
-FROM marketplace.gcr.io/google/debian12@${BASE_IMAGE_SHA}
+# Use the official Debian 12 base so GitHub-hosted runners do not need GCE-only
+# authentication to Google Cloud Marketplace.
+FROM debian:12-slim
 
 # Install any necessary dependencies
 # NOTE: From libxcomposite down, these are minimal requirements to run a

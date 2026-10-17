@@ -14,6 +14,35 @@
 import("//starboard/build/buildflags.gni")
 import("//testing/test.gni")
 
+# The font assets are separately licensed; see
+# //third_party/thmanyah-fonts/NOTICE.md.
+declare_args() {
+  enable_thmanyah_fonts = false
+}
+
+if (enable_thmanyah_fonts) {
+  action("generate_thmanyah_font_data") {
+    script = "generate_thmanyah_font_header.py"
+    _font_root = "//third_party/thmanyah-fonts/thmanyah typeface"
+    inputs = [
+      script,
+      "$_font_root/thmanyahsans/otf/thmanyahsans-Regular.otf",
+      "$_font_root/thmanyahsans/otf/thmanyahsans-Medium.otf",
+      "$_font_root/thmanyahsans/otf/thmanyahsans-Bold.otf",
+      "$_font_root/thmanyahseriftext/otf/thmanyahseriftext-Regular.otf",
+      "$_font_root/thmanyahserifdisplay/otf/thmanyahserifdisplay-Bold.otf",
+    ]
+    outputs = [ "$target_gen_dir/thmanyah_font_data.h" ]
+    args = [
+      "--font-root",
+      rebase_path(_font_root, root_build_dir),
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+  }
+}
+
+
 source_set("renderer") {
   sources = [
     "cobalt_content_renderer_client.cc",
@@ -23,6 +52,7 @@ source_set("renderer") {
   ]
 
   deps = [
+    "//base",
     "//cobalt/browser:switches",
     "//cobalt/browser/mojom",
     "//cobalt/media/audio:webaudio",
@@ -47,6 +77,11 @@ source_set("renderer") {
     if (is_ios && is_internal_build) {
       deps += [ "//cobalt/internal/cobalt/components/cdm/renderer/starboard:platform_drm_key_system_info" ]
     }
+  }
+  if (enable_thmanyah_fonts) {
+    deps += [ ":generate_thmanyah_font_data" ]
+    include_dirs = [ "$target_gen_dir" ]
+    defines = [ "ENABLE_THMANYAH_FONTS" ]
   }
 }
 

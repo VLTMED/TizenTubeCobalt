@@ -13,6 +13,12 @@ inputs:
   enable_sccache:
     description: Use sccache for build acceleration.
     default: 'false'
+  no_rbe:
+    description: Disable remote build execution when no RBE credentials are available.
+    default: 'false'
+  prepare_android_debug_keystore:
+    description: Create a temporary Android debug keystore before the local APK build.
+    default: 'false'
   sccache_gcs_key:
     description: GCS SA key to read/write to bucket
 runs:
@@ -22,6 +28,63 @@ runs:
         run: |
           rm -rf cobalt/src/out
         shell: bash
+      - name: Prepare temporary Android debug keystore
+        if: ${{ inputs.prepare_android_debug_keystore == 'true' && contains(matrix.platform, 'android') }}
+        working-directory: cobalt/src
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          CONFIG: ${{ matrix.config }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_root="$(pwd -P)"
+          workspace_root="${GITHUB_WORKSPACE:-$(realpath -m "${source_root}/../..")}"
+          workspace_root="$(realpath -m "${workspace_root}")"
+          expected_keystore="${workspace_root}/.android/debug.keystore"
+          echo "Cobalt source root: ${source_root}"
+          echo "Workspace debug keystore: ${expected_keystore}"
+
+          mkdir -p "$(dirname "${expected_keystore}")"
+
+          if [[ ! -f "${expected_keystore}" ]]; then
+            keytool=""
+            for candidate in "${JAVA_HOME:-}/bin/keytool" third_party/jdk/current/bin/keytool; do
+              if [[ -x "${candidate}" ]]; then
+                keytool="${candidate}"
+                break
+              fi
+            done
+            if [[ -z "${keytool}" ]]; then
+              keytool="$(command -v keytool || true)"
+            fi
+            if [[ -z "${keytool}" || ! -x "${keytool}" ]]; then
+              echo "::error::keytool is not available after depot_tools setup."
+              exit 1
+            fi
+
+            "${keytool}" -genkeypair -v \
+              -keystore "${expected_keystore}" \
+              -storetype JKS \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -noprompt
+          fi
+
+          actual_keystore="$(realpath -e "${expected_keystore}")"
+          ninja_keystore="$(realpath -m "${source_root}/../../.android/debug.keystore")"
+          if [[ ! -s "${actual_keystore}" || "${actual_keystore}" != "${ninja_keystore}" ]]; then
+            echo "::error::Debug keystore does not match the Ninja/Siso workspace-root input path."
+            echo "Actual: ${actual_keystore}"
+            echo "Expected by Ninja/Siso: ${ninja_keystore}"
+            exit 1
+          fi
+          echo "Verified Ninja/Siso workspace-root keystore: ${actual_keystore}"
+
       - name: Install sccache
         if: inputs.enable_sccache == 'true'
         uses: ./.github/actions/sccache
@@ -30,13 +93,14 @@ runs:
       - name: GN gen
         env:
           ENABLE_SCCACHE: ${{ inputs.enable_sccache }}
+          DISABLE_RBE: ${{ inputs.no_rbe }}
           PLATFORM: ${{ matrix.platform }}
           CONFIG: ${{ matrix.config }}
         working-directory: cobalt/src
         run: |
           gn_flags=()
-          if [[ "${PLATFORM}" == *"tvos"* ]]; then
-            # TvOS does not use RBE unless it's sccache
+          if [[ "${DISABLE_RBE}" == "true" || "${PLATFORM}" == *"tvos"* ]]; then
+            # GitHub-hosted builds lack GCE credentials; tvOS also does not use RBE unless it's sccache.
             gn_flags+=(--no-rbe)
           fi
           if [[ "${ENABLE_SCCACHE}" == "true" ]]; then
