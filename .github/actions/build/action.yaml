@@ -153,6 +153,7 @@ runs:
         env:
           PLATFORM: ${{ matrix.platform }}
           CONFIG: ${{ matrix.config }}
+        shell: bash
         run: |
           set -euo pipefail
           source_root="$(pwd -P)"
