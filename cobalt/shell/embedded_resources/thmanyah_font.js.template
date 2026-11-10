@@ -1,0 +1,276 @@
+(function () {
+  'use strict';
+
+  var windowKey = '__tizentubeThmanyahFontBootstrapV1';
+  if (window[windowKey]) return;
+  window[windowKey] = true;
+
+  var fontBase64 = '__THMANYAH_FONT_BASE64__';
+  var fontFamily = '"Thmanyah Sans", Roboto, Arial, sans-serif';
+  var textAttribute = 'data-tizentube-thmanyah-text';
+  var documentStyleAttribute = 'data-tizentube-thmanyah-document-style';
+  var shadowStyleAttribute = 'data-tizentube-thmanyah-shadow-style';
+  var textRule = '[' + textAttribute + '="1"]{font-family:' + fontFamily + ' !important;}';
+  var fontFaceRule = '@font-face{font-family:"Thmanyah Sans";font-style:normal;font-weight:500;font-display:swap;src:url("data:font/woff2;base64,' + fontBase64 + '") format("woff2");}';
+  var excludedTags = {
+    SCRIPT: true, STYLE: true, NOSCRIPT: true, TEMPLATE: true, SVG: true,
+    PATH: true, DEFS: true, SYMBOL: true, USE: true, G: true,
+    VIDEO: true, AUDIO: true, TRACK: true, CANVAS: true, IFRAME: true,
+    OBJECT: true, EMBED: true, MATH: true
+  };
+  var iconClassPattern = /(^|[\s_-])[^\s]*?(?:icon|glyph|symbol)[^\s]*(?=$|\s)/i;
+  var captionClassPattern = /(^|[\s_-])(?:caption-window|ytp-caption-window-container|captions-text|caption-visual-line|ytp-caption-segment|ytlr-caption-renderer|ytlr-caption-overlay)(?=$|[\s_-])/i;
+  var privateUsePattern = /[\uE000-\uF8FF]/;
+  var fontFamilyIconPattern = /(?:icon|symbol|glyph|fontawesome)/i;
+  var mutationObserverOptions = { childList: true, subtree: true, characterData: true };
+  var nonceRefreshDone = false;
+
+  function getNonce() {
+    var candidate;
+    try {
+      // A script nonce does not necessarily authorize inline styles. Prefer
+      // only a nonce carried by a style element or stylesheet link.
+      candidate = document.querySelector('style[nonce]');
+      if (!candidate) {
+        candidate = document.querySelector('link[rel~="stylesheet"][nonce]');
+      }
+      if (candidate) return candidate.nonce || candidate.getAttribute('nonce') || '';
+    } catch (error) { }
+    return '';
+  }
+
+  function stylesheetHasRules(style) {
+    try {
+      return !!(style.sheet && style.sheet.cssRules && style.sheet.cssRules.length);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function addStyle(root, cssText, marker) {
+    if (!root) return false;
+    if (root.__tizentubeThmanyahStyleInstalled) return true;
+
+    var nonce = getNonce();
+    // Wait for YouTube's own style nonce rather than inserting a blocked style
+    // and generating a CSP violation. Document Start may precede <head>.
+    if (!nonce) return false;
+    if (root.__tizentubeThmanyahStyleAttempted &&
+        root.__tizentubeThmanyahStyleAttemptedNonce === nonce) {
+      return false;
+    }
+
+    var target = root;
+    if (root.nodeType === 9) target = root.head || root.documentElement;
+    if (!target || !target.appendChild) return false;
+
+    var style = document.createElement('style');
+    style.setAttribute(marker, '1');
+    if (nonce) style.nonce = nonce;
+    style.textContent = cssText;
+    target.appendChild(style);
+
+    root.__tizentubeThmanyahStyleAttempted = true;
+    root.__tizentubeThmanyahStyleAttemptedNonce = nonce;
+    if (stylesheetHasRules(style)) {
+      root.__tizentubeThmanyahStyleInstalled = true;
+      return true;
+    }
+
+    if (style.parentNode) style.parentNode.removeChild(style);
+    return false;
+  }
+
+  function preloadFont() {
+    try {
+      if (document.fonts && document.fonts.load) {
+        var loadResult = document.fonts.load('500 16px "Thmanyah Sans"', 'العربية English 0123456789');
+        if (loadResult && loadResult.then) {
+          loadResult.then(function (loadedFaces) {
+            if (!loadedFaces || !loadedFaces.length) {
+              if (window.console && console.warn) console.warn('[Thmanyah Sans] No embedded font face loaded; check CSP font-src');
+              return;
+            }
+            for (var i = 0; i < loadedFaces.length; i++) {
+              if (loadedFaces[i].family === 'Thmanyah Sans' &&
+                  loadedFaces[i].status === 'loaded') return;
+            }
+            if (window.console && console.warn) console.warn('[Thmanyah Sans] Embedded font face is not loaded; check CSP font-src');
+          }).catch(function (error) {
+            if (window.console && console.warn) console.warn('[Thmanyah Sans] Embedded font failed to load', error);
+          });
+        }
+      }
+    } catch (error) {
+      if (window.console && console.warn) console.warn('[Thmanyah Sans] Font preload could not start', error);
+    }
+  }
+
+  function installDocumentStyle() {
+    var added = addStyle(document, fontFaceRule + textRule, documentStyleAttribute);
+    if (added && !window.__tizentubeThmanyahFontPreloaded) {
+      window.__tizentubeThmanyahFontPreloaded = true;
+      preloadFont();
+    }
+    return added;
+  }
+
+  function installShadowStyle(shadowRoot) {
+    return addStyle(shadowRoot, textRule, shadowStyleAttribute);
+  }
+
+  function getClassText(element) {
+    var value = element.getAttribute && element.getAttribute('class');
+    if (value) return value;
+    if (typeof element.className === 'string') return element.className;
+    return '';
+  }
+
+  function hasExcludedAncestor(element) {
+    var current = element;
+    while (current) {
+      if (current.nodeType === 1) {
+        var tagName = String(current.tagName || '').toUpperCase();
+        if (excludedTags[tagName]) return true;
+        if (/(?:^|-)icon(?:-|$)/i.test(tagName)) return true;
+        var classText = getClassText(current);
+        if (iconClassPattern.test(classText) || captionClassPattern.test(classText)) return true;
+        if (current.getAttribute('aria-hidden') === 'true' ||
+            String(current.getAttribute('role') || '').toLowerCase() === 'img') return true;
+      }
+      if (current.nodeType === 11 && current.host) {
+        current = current.host;
+      } else {
+        current = current.parentNode;
+      }
+    }
+    return false;
+  }
+
+  function hasDirectVisibleText(element) {
+    var hasText = false;
+    for (var i = 0; i < element.childNodes.length; i++) {
+      var child = element.childNodes[i];
+      if (child.nodeType !== 3) continue;
+      var text = child.nodeValue || '';
+      if (!/\S/.test(text)) continue;
+      // Preserve private-use glyphs often used by icon fonts, even when they
+      // appear next to ordinary text inside the same element.
+      if (privateUsePattern.test(text)) return false;
+      hasText = true;
+    }
+    return hasText;
+  }
+
+  function isTextControl(element) {
+    var tagName = String(element.tagName || '').toUpperCase();
+    if (tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+    if (tagName !== 'INPUT') return false;
+    var type = String(element.getAttribute('type') || 'text').toLowerCase();
+    return /^(text|search|email|url|tel|password|number)$/.test(type);
+  }
+
+  function usesIconFont(element) {
+    try {
+      var family = window.getComputedStyle(element).fontFamily || '';
+      return fontFamilyIconPattern.test(family);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function markTextElement(element) {
+    if (!element || element.nodeType !== 1) return;
+    if (element.getAttribute(textAttribute) === '1' || hasExcludedAncestor(element)) return;
+    if (!hasDirectVisibleText(element) && !isTextControl(element)) return;
+    if (usesIconFont(element)) return;
+    if (element.getAttribute(textAttribute) !== '1') {
+      element.setAttribute(textAttribute, '1');
+    }
+  }
+
+  function queueElementScan(node, queue) {
+    for (var i = 0; i < queue.length; i++) {
+      var queued = queue[i];
+      if (queued === node || (queued.contains && queued.contains(node))) return;
+    }
+    for (var j = queue.length - 1; j >= 0; j--) {
+      if (node.contains && node.contains(queue[j])) queue.splice(j, 1);
+    }
+    queue.push(node);
+  }
+
+  function scanSubtree(root) {
+    if (!root) return;
+    if (root.nodeType === 9) {
+      installDocumentStyle();
+    } else if (root.nodeType === 11 && root.host) {
+      installShadowStyle(root);
+    }
+
+    if (root.nodeType === 1) {
+      markTextElement(root);
+      if (root.shadowRoot) scanSubtree(root.shadowRoot);
+    }
+
+    var walker;
+    try {
+      walker = document.createTreeWalker(root, 1 | 4, null, false);
+    } catch (error) {
+      return;
+    }
+
+    var node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeType === 1) {
+        markTextElement(node);
+        if (node.shadowRoot) scanSubtree(node.shadowRoot);
+      }
+    }
+
+    if ((root.nodeType === 9 || (root.nodeType === 11 && root.host)) &&
+        !root.__tizentubeThmanyahObserver) {
+      var observer = new MutationObserver(function (mutations) {
+        var addedStyleNonce = false;
+        var elementsToScan = [];
+        for (var m = 0; m < mutations.length; m++) {
+          var mutation = mutations[m];
+          if (mutation.type === 'characterData') {
+            markTextElement(mutation.target.parentNode);
+            continue;
+          }
+          for (var n = 0; n < mutation.addedNodes.length; n++) {
+            var added = mutation.addedNodes[n];
+            if (added.nodeType === 1) {
+              if (added.matches && added.matches('style[nonce],link[rel~="stylesheet"][nonce]')) addedStyleNonce = true;
+              if (added.querySelector && added.querySelector('style[nonce],link[rel~="stylesheet"][nonce]')) addedStyleNonce = true;
+              queueElementScan(added, elementsToScan);
+            } else if (added.nodeType === 3) {
+              markTextElement(added.parentNode);
+            }
+          }
+        }
+        for (var s = 0; s < elementsToScan.length; s++) {
+          scanSubtree(elementsToScan[s]);
+        }
+        if (root.nodeType === 9) installDocumentStyle();
+        if (addedStyleNonce && root.nodeType === 9 && !nonceRefreshDone) {
+          nonceRefreshDone = true;
+          scanSubtree(document);
+        }
+      });
+      observer.observe(root, mutationObserverOptions);
+      root.__tizentubeThmanyahObserver = observer;
+    }
+  }
+
+  // At Cobalt Document Start, the document or its style nonce may not exist
+  // yet. Observe it and insert the styles as soon as YouTube provides a nonce,
+  // without waiting for a video or weakening the page's CSP.
+  scanSubtree(document);
+  document.addEventListener('DOMContentLoaded', function () {
+    // Custom elements may attach open shadow roots while they are upgraded.
+    // Re-scan once after parsing; subsequent DOM changes are observer-driven.
+    scanSubtree(document);
+  }, false);
+})();

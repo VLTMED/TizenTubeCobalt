@@ -533,16 +533,33 @@ config("embed_polyfilled_javascript_config") {
   include_dirs = [ root_gen_dir ]
 }
 
+action("generate_thmanyah_font_polyfill") {
+  script = "//cobalt/shell/embedded_resources/generate_thmanyah_font_polyfill.py"
+  inputs = [
+    "embedded_resources/thmanyah_font.js.template",
+    "embedded_resources/fonts/thmanyahsans-Medium.woff2",
+  ]
+  outputs = [ "$target_gen_dir/embedded_resources/thmanyah_font.js" ]
+  args = [
+    rebase_path(inputs[0], root_build_dir),
+    rebase_path(inputs[1], root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 # TODO(cobalt, b/390710539): migrate to GRIT.
 action("embed_polyfilled_javascript") {
   script = "//cobalt/build/generate_data_header.py"
   outputs = [ "$target_gen_dir/embedded_resources/embedded_js.h" ]
   public_configs = [ ":embed_polyfilled_javascript_config" ]
+  sources = [ "$target_gen_dir/embedded_resources/thmanyah_font.js" ]
+  deps = [ ":generate_thmanyah_font_polyfill" ]
 
   args = [
     "CobaltJavaScriptPolyfill",
     rebase_path(outputs[0], root_build_dir),
     rebase_path("embedded_resources/cobalt_java_script_polyfill",
                 root_build_dir),
+    rebase_path(sources[0], root_build_dir),
   ]
 }

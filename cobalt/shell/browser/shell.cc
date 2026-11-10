@@ -640,9 +640,14 @@ void Shell::RegisterInjectedJavaScript() {
     std::string js(reinterpret_cast<const char*>(file_contents.data),
                    file_contents.size);
 
-    // Inject a script at document start for all origins
+    // Keep existing polyfills available to all origins, but limit the font
+    // bootstrap to YouTube's web application origins.
     const std::u16string script(base::UTF8ToUTF16(js));
-    const std::vector<std::string> allowed_origins({"*"});
+    const std::vector<std::string> allowed_origins =
+        file_name == "thmanyah_font.js"
+            ? std::vector<std::string>{"https://www.youtube.com",
+                                       "https://youtube.com"}
+            : std::vector<std::string>{"*"};
     auto result = js_communication_host_->AddDocumentStartJavaScript(
         script, allowed_origins);
 
